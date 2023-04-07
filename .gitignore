@@ -1,0 +1,36 @@
+.venv
+# Compiled Python files
+*.pyc
+
+# Compiled UI files
+*.pyo
+*.pyd
+
+# Python cache directories
+__pycache__/
+*.pyc
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.bak
+*.swp
+*.~*
+
+# Distribution and build files
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Generated files
+*.spec
+
+# Ignore the application window state file
+app_state.json
+# download folder
+download/
