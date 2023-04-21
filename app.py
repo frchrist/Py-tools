@@ -1,6 +1,4 @@
 
-import logging
-import sys
 import customtkinter
 from view.tl_view import TlView
 

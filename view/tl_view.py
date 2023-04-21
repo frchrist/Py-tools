@@ -1,6 +1,7 @@
 from viewmodel import tl_viewmodel
 import customtkinter as CTK
 from tkinter import filedialog as fd
+import tkinter
 import threading
 from PIL import Image
 from utils import decorators
@@ -12,6 +13,11 @@ PDF_SPLIT  = "Pdf Split"
 APP_VERSION = "1.0.0"
 APP_TITLE = "Py tools {}".format(APP_VERSION)
 APPLICATION_STATE_FILE = "./app_state.json"
+
+IMAGE_PROCESS_ACTIONS = {
+    "BG" : "Remove Image background",
+    "IQ" : "Increase Image Quality"
+}
 
 
 
@@ -39,6 +45,9 @@ def openfiledialog():
 
     return name if isinstance(name, str) and name.strip() else None
 
+
+
+
 class TlView:
     def __init__(self, root : CTK.CTk ):
         self.root :  CTK.CTk = root
@@ -61,7 +70,27 @@ class TlView:
         self.main_frame.pack(fill=CTK.BOTH, expand=True)
         self.image_processing_tab_widgets()
 
+        self.status_bar_widget(self.root)
+        self.reset_status_bar(2000)
+
+
+    def status_bar_widget(self, parent):
+        image_tab = self.main_tab.tab(IMAGE_TAB)
+        frame = CTK.CTkFrame(parent, fg_color="#F3FFF5", corner_radius=0)
+
+        self.status_label = CTK.CTkLabel(frame, text="stable", )
+        self.status_label.pack(side='left')
+
+
+        frame.pack(fill="both", padx=3)
+
  
+
+    def reset_status_bar(self, mil=5000):
+        self.root.after(mil, self.reset_bar)
+    def reset_bar(self):
+        self.status_label.configure(text="")
+        self.root.after(5000, self.reset_bar)
 
     def get_current_image_to_process(self):
         return self._current_image_to_process
@@ -72,6 +101,28 @@ class TlView:
 
         button = CTK.CTkButton(frame, text="Your Image" , command=self.set_loaded_image)
         button.pack(ipady=10, pady=10, padx=8, expand=False) 
+
+
+        # What want you to do with you image
+        w_frame =CTK.CTkFrame(frame,border_width=1)
+        CTK.CTkLabel(w_frame, text="How to process your image ?").pack()
+
+
+        action_vars = {}
+        for key,action in IMAGE_PROCESS_ACTIONS.items():
+            action_vars[key] = CTK.StringVar()
+
+
+        # print(action_vars)
+        for key,action in IMAGE_PROCESS_ACTIONS.items():
+            # key_var = CTK.StringVar()
+            CTK.CTkCheckBox(w_frame, text=action,offvalue=f"OFF{key}", onvalue=key,variable=action_vars[key],command = lambda key=key: self.image_actions_callback(action_vars[key]),
+             border_width=1, border_color="#E5E5E5").pack(side="left", padx=6)
+        # CTK.CTkCheckBox(w_frame, text="Increace Quality", onvalue="IQ").pack(side="left")
+
+
+
+        w_frame.pack(pady=5, ipadx=3, ipady=3)
 
         # Image preview
 
@@ -92,18 +143,24 @@ class TlView:
         self.process_btn.configure(state="disabled", command=self.image_process_thread)
 
         self.reset_btn = CTK.CTkButton(frame, text="reset", fg_color="transparent",hover=False,
-            image=create_ctk_image_instance("./view/assets/undo.png", (20,20)))
+            image=create_ctk_image_instance("./view/assets/undo.png", (20,20)), command=self.viewmodel.reset_image_tab_ui)
         self.reset_btn.pack(pady=5,padx=4, side="left")
         self.reset_btn.configure(state="disabled")
     
 
         frame.pack(expand=True, pady=3,ipadx=5, padx=3, fill="both")
 
+    def image_tab_reset(self):
+        self.selected_image.configure(image=my_image)
+        self.transformed_image.configure(image=my_image)
+
+
     @decorators.log(message=None)
     def image_process_thread(self) -> None:
-        threading.Thread(target = self.viewmodel.process_image).start()
+        threading.Thread(target = self.viewmodel.process_image, args=(self.status_label,)).start()
         # self.viewmodel.process_image()
 
+    @decorators.log(message=None)
     def set_loaded_image(self):
         self._current_image_to_process = openfiledialog()
         if self._current_image_to_process != None:
@@ -111,20 +168,28 @@ class TlView:
             self.selected_image.configure(image=instance)
         self.enable_process_btn()
 
+    @decorators.log(message=None)
     def set_transformed_image(self, image_path):
         image_ui_instance = create_ctk_image_instance(image_path)
         self.transformed_image.configure(image=image_ui_instance)
 
 
 
+    @decorators.log(message=None)
     def enable_process_btn(self) -> None:
         self.process_btn.configure(state="normal")
         self.reset_btn.configure(state="normal")
 
+
+    @decorators.log(message=None)
+    def image_actions_callback(self, var):
+        self.viewmodel.on_image_process_actions_changed(var.get())
+    @decorators.log(message=None)
     def set_viewmodel(self, viewmodel) -> None:
         self.viewmodel = viewmodel
 
 
+    @decorators.log(message=None)
     def read_application_state(self,key, state_file = APPLICATION_STATE_FILE) -> str:
         try:
             with open(state_file, 'r') as f:
@@ -134,6 +199,7 @@ class TlView:
             return None
 
 
+    @decorators.log(message=None)
     def on_close(self) -> None:
         """
         Saves the current window state to `app_state.json` and destroys the Tkinter root window.
